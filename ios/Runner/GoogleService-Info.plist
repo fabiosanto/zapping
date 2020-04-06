@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>562493051310-c7nb829j62eghj665slqikofkrhmi7rk.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.562493051310-c7nb829j62eghj665slqikofkrhmi7rk</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCDi60L3Lwj4en6Bi5x82qEXH4F5vpvjXk</string>
+	<key>GCM_SENDER_ID</key>
+	<string>562493051310</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.fabiosanto.zappinx</string>
+	<key>PROJECT_ID</key>
+	<string>zapping-netflix</string>
+	<key>STORAGE_BUCKET</key>
+	<string>zapping-netflix.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:562493051310:ios:fb35232dd3d3c8e94ff83f</string>
+	<key>DATABASE_URL</key>
+	<string>https://zapping-netflix.firebaseio.com</string>
+</dict>
+</plist>

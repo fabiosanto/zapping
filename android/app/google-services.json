@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "562493051310",
+    "firebase_url": "https://zapping-netflix.firebaseio.com",
+    "project_id": "zapping-netflix",
+    "storage_bucket": "zapping-netflix.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:562493051310:android:f1f248353374bebb4ff83f",
+        "android_client_info": {
+          "package_name": "com.fabiosanto.zappinx"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "562493051310-2n0kas73vdd08b8q3bd1ma8qr97vtsve.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCC1WmesHd5fEKTfwzltTYLVieVHmC1STU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "562493051310-2n0kas73vdd08b8q3bd1ma8qr97vtsve.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "562493051310-c7nb829j62eghj665slqikofkrhmi7rk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.fabiosanto.zappinx"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
