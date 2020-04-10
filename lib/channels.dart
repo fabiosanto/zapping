@@ -62,7 +62,7 @@ class ChannelsList extends StatelessWidget {
           .orderBy('slot')
           .where('slot',
               isGreaterThanOrEqualTo: liveSlot,
-              isLessThanOrEqualTo: liveSlot + 4)
+              isLessThanOrEqualTo: liveSlot + 6)
           .snapshots(),
       builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.hasError) return new Text('Error: ${snapshot.error}');
@@ -87,16 +87,33 @@ class ChannelsList extends StatelessWidget {
           children: <Widget>[
             buildChannelTitle(document),
             buildScheduleTimeline(documents),
-            MaterialButton(child: Text('aaa'),)
+            buildMaterialButton()
           ],
         ),
       ),
     );
   }
 
+  Widget buildMaterialButton() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: <Widget>[
+          MaterialButton(
+            child: Text('Play'),
+            color: Colors.red[900],
+            shape: StadiumBorder(),
+            elevation: 0,
+            onPressed: () {},
+          )
+        ],
+      ),
+    );
+  }
+
   Widget buildScheduleTimeline(List<DocumentSnapshot> documents) {
     return Container(
-      height: 130,
+      height: 150,
       child: ListView(
         padding: EdgeInsets.fromLTRB(10, 0, 10, 0),
         scrollDirection: Axis.horizontal,
@@ -127,8 +144,20 @@ class ChannelsList extends StatelessWidget {
       child: Column(
         children: <Widget>[
           buildTitleCard(document),
-          buildSlider(document['slot'])
+          buildSlider(document['slot']),
+          buildTime(document['slot'])
         ],
+      ),
+    );
+  }
+
+  Container buildTime(int slot) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0),
+      alignment: Alignment.centerLeft,
+      child: Text(
+        '${slot*2}.00',
+        style: TextStyle(fontSize: 10.0),
       ),
     );
   }
@@ -166,3 +195,4 @@ class ChannelsList extends StatelessWidget {
         ));
   }
 }
+

@@ -25,14 +25,36 @@ exports.addMessage = functions.https.onRequest(async (req, res) => {
   const scheduleID = ''.concat(year, month, day);
 
   // channel ysWgSNVGVZy41Qhi2Q5V Drama
-  const channelId = 'ysWgSNVGVZy41Qhi2Q5V';
-  generateSchedule(channelId, scheduleID, null);
-
+  var channelId = 'ysWgSNVGVZy41Qhi2Q5V';
+  generateSchedule(channelId, scheduleID, "drama");
+  
+  //channel 7XfzrS9nrMtfN6IwI39w comedies
+  channelId = '7XfzrS9nrMtfN6IwI39w';
+  generateSchedule(channelId, scheduleID, "Comedies");
 
   res.json({ ok: 'finished' });
+
 });
 
-function generateSchedule(channelId, scheduleID, genreId) {
+exports.addTitle = functions.https.onRequest(async (req, res) => {
+  
+  const db = admin.firestore();
+
+  db.collection('movies')
+          .add({
+            genre: [req.query.genre],
+            image: req.query.image,
+            nId: req.query.nId,
+            views: 0,
+            name: req.query.name,
+            country: [req.query.country]
+          })
+
+  res.json({ ok: 'added' });
+
+});
+
+function generateSchedule(channelId, scheduleID, genre) {
 
   const db = admin.firestore();
 
@@ -40,18 +62,10 @@ function generateSchedule(channelId, scheduleID, genreId) {
   const startSlot = 0;
 
   let movies = db.collection('movies')
+    movies.where("genre", 'array-contains', genre)
     .orderBy('views')
-    .limit(totalSlot);
-
-  // channel query
-  let query = null;
-  if(genreId !== null) {
-    query = movies.where('genreId', '==', genreId)
-  } else {
-    query = movies
-  }
-
-  query.get()
+    .limit(totalSlot)
+    .get()
     .then(snapshot => {
       if (snapshot.empty) {
         console.log('No matching documents.');
