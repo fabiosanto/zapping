@@ -22,12 +22,6 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primaryColor:Colors.grey[800],
         accentColor: Colors.red[900],
-        sliderTheme: SliderTheme.of(context).copyWith(
-          activeTrackColor: Colors.red[700],
-          inactiveTrackColor: Colors.red[100],
-          thumbColor: Colors.red[900],
-          thumbShape: RoundSliderThumbShape(enabledThumbRadius: 5.0),
-        ),
       ),
       home: ChannelsList(),
     );

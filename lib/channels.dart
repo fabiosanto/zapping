@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class ChannelsList extends StatelessWidget {
   static var now = new DateTime.now();
   var scheduleId = '${now.year}${now.month}${now.day}';
-  var liveSlot = 0;
+  var liveSlot = 0.0;
   var liveMinute = 0.0;
 
   @override
@@ -39,14 +39,14 @@ class ChannelsList extends StatelessWidget {
   }
 
   void initTimeValue() {
-//    var hour = now.hour;
-    var hour = 10;
+    var hour = now.hour;
+//    var hour = 2;
 
     if (hour % 2 == 0) {
-      liveSlot = hour;
+      liveSlot = hour / 2;
       liveMinute = now.minute * 60.0;
     } else {
-      liveSlot = hour - 1;
+      liveSlot = (hour - 1) / 2;
       liveMinute = 90 * 60.0;
     }
   }
@@ -59,9 +59,10 @@ class ChannelsList extends StatelessWidget {
           .collection('schedule')
           .document(scheduleId)
           .collection('slots')
+          .orderBy('slot')
           .where('slot',
               isGreaterThanOrEqualTo: liveSlot,
-              isLessThanOrEqualTo: liveSlot + 6)
+              isLessThanOrEqualTo: liveSlot + 4)
           .snapshots(),
       builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.hasError) return new Text('Error: ${snapshot.error}');
@@ -70,57 +71,98 @@ class ChannelsList extends StatelessWidget {
           case ConnectionState.waiting:
             return ListTile(title: new Text('Loading...'));
           default:
-            return ListTile(
-              title: Text(document['name']),
-              subtitle: SizedBox(
-                height: 140,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children:
-                      snapshot.data.documents.map((DocumentSnapshot document) {
-                    return buildTitleTile(document);
-                  }).toList(),
-                ),
-              ),
-            );
+            return buildListItemContainer(document, snapshot.data.documents);
         }
       },
     );
   }
 
-  SizedBox buildTitleTile(DocumentSnapshot document) {
-    return SizedBox(
-        width: 260,
-        child: DecoratedBox(
-            child: Column(
-              children: <Widget>[
-                Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Image.network(
-                    document['logo'],
-                    height: 70,
-                    width: 150,
-                  ),
-                ),
-                buildSlider(document['slot'])
-              ],
-            ),
-            decoration: BoxDecoration(color: Colors.grey[800])));
+  Container buildListItemContainer(
+      DocumentSnapshot document, List<DocumentSnapshot> documents) {
+    return Container(
+      margin: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 8.0),
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: Colors.grey[800]),
+        child: Column(
+          children: <Widget>[
+            buildChannelTitle(document),
+            buildScheduleTimeline(documents),
+            MaterialButton(child: Text('aaa'),)
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildScheduleTimeline(List<DocumentSnapshot> documents) {
+    return Container(
+      height: 130,
+      child: ListView(
+        padding: EdgeInsets.fromLTRB(10, 0, 10, 0),
+        scrollDirection: Axis.horizontal,
+        children: documents.map((DocumentSnapshot document) {
+          return buildTitleTile(document);
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget buildChannelTitle(DocumentSnapshot document) {
+    return Container(
+      alignment: AlignmentGeometry.lerp(
+          Alignment.centerLeft, Alignment.centerLeft, 0.0),
+      padding: EdgeInsets.all(16),
+      child: Text(document['name'],
+          style: TextStyle(
+              fontFamily: 'RobotoCondensed',
+              color: Colors.grey[100],
+              fontStyle: FontStyle.normal,
+              fontSize: 20)),
+    );
+  }
+
+  Widget buildTitleTile(DocumentSnapshot document) {
+    return Container(
+      width: 200,
+      child: Column(
+        children: <Widget>[
+          buildTitleCard(document),
+          buildSlider(document['slot'])
+        ],
+      ),
+    );
+  }
+
+  Widget buildTitleCard(DocumentSnapshot document) {
+    return Container(
+      height: 110,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        elevation: 0.0,
+        child: Image.network(
+          document['image'],
+          width: 200,
+          fit: BoxFit.fitWidth,
+        ),
+      ),
+    );
   }
 
   Widget buildSlider(int slot) {
-    if (slot != liveSlot)
-      return SizedBox(
-          height: 8,
-          child: DecoratedBox(
-              child: Text(''),
-              decoration: BoxDecoration(color: Colors.grey[800])));
+    var value = 0.0;
+    // liveMinute : 7200 = x : 1
+    // x = liveMinute
 
-    return Slider(
-      min: 0,
-      max: 7200,
-      value: liveMinute,
-      onChanged: null,
-    );
+    if (slot == liveSlot) value = liveMinute / 7200;
+
+    return Padding(
+        padding: EdgeInsets.fromLTRB(4, 6, 4, 0),
+        child: SizedBox(
+          height: 3,
+          child: LinearProgressIndicator(
+            backgroundColor: Colors.grey[700],
+            value: value,
+          ),
+        ));
   }
 }
