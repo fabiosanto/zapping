@@ -1,4 +1,4 @@
-# zappingnetflix
+# zapping
 
 Zapping Netflix
 

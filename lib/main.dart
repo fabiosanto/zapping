@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:zappingnetflix/channels.dart';
+import 'package:zapping/channels.dart';
 
 void main() => runApp(MyApp());
 
