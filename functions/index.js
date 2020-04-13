@@ -32,6 +32,10 @@ exports.addMessage = functions.https.onRequest(async (req, res) => {
   channelId = '7XfzrS9nrMtfN6IwI39w';
   generateSchedule(channelId, scheduleID, "Comedies");
 
+  //jxcj9sx09Nc1JQBjR2Hg
+  channelId = 'jxcj9sx09Nc1JQBjR2Hg';
+  generateSchedule(channelId, scheduleID, "Action");
+
   res.json({ ok: 'finished' });
 
 });

@@ -1,3 +1,4 @@
+import 'package:android_intent/android_intent.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -62,7 +63,7 @@ class ChannelsList extends StatelessWidget {
           .orderBy('slot')
           .where('slot',
               isGreaterThanOrEqualTo: liveSlot,
-              isLessThanOrEqualTo: liveSlot + 6)
+              isLessThanOrEqualTo: liveSlot + 1)
           .snapshots(),
       builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.hasError) return new Text('Error: ${snapshot.error}');
@@ -87,14 +88,16 @@ class ChannelsList extends StatelessWidget {
           children: <Widget>[
             buildChannelTitle(document),
             buildScheduleTimeline(documents),
-            buildMaterialButton()
+            documents.isNotEmpty
+                ? buildMaterialButton(documents.first['nId'])
+                : Container()
           ],
         ),
       ),
     );
   }
 
-  Widget buildMaterialButton() {
+  Widget buildMaterialButton(String nId) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
@@ -104,11 +107,38 @@ class ChannelsList extends StatelessWidget {
             color: Colors.red[900],
             shape: StadiumBorder(),
             elevation: 0,
-            onPressed: () {},
+            onPressed: () {
+              launchTitle(nId, liveMinute.toInt());
+            },
           )
         ],
       ),
     );
+  }
+
+  void launchTitle(String title, int time) {
+    try {
+      final AndroidIntent intent = AndroidIntent(
+          action: 'action_view',
+          data: Uri.encodeFull(
+              'http://www.netflix.com/watch/$title?t=liveMinute'),
+          package: 'com.netflix.mediaclient');
+      intent.launch();
+    } catch (exc) {
+      print(exc);
+    }
+  }
+
+  void launchTitleDetail(String title) {
+    try {
+      final AndroidIntent intent = AndroidIntent(
+          action: 'action_view',
+          data: Uri.encodeFull('http://www.netflix.com/title/$title'),
+          package: 'com.netflix.mediaclient');
+      intent.launch();
+    } catch (exc) {
+      print(exc);
+    }
   }
 
   Widget buildScheduleTimeline(List<DocumentSnapshot> documents) {
@@ -156,24 +186,51 @@ class ChannelsList extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0),
       alignment: Alignment.centerLeft,
       child: Text(
-        '${slot*2}.00',
+        '${slot * 2}.00',
         style: TextStyle(fontSize: 10.0),
       ),
     );
   }
 
+  //feature flag here!
+  static const showNflixImages = true;
+
   Widget buildTitleCard(DocumentSnapshot document) {
     return Container(
-      height: 110,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        elevation: 0.0,
-        child: Image.network(
-          document['image'],
-          width: 200,
-          fit: BoxFit.fitWidth,
+        height: 110,
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          elevation: 0.0,
+          child: MaterialButton(
+            padding: EdgeInsets.all(0.0),
+            onPressed: () {
+              launchTitleDetail(document['nId']);
+            },
+            child: showNflixImages? buildTitleImage(document) : buildTitleImage2(document),
+          ),
+        ));
+  }
+
+  Widget buildTitleImage2(DocumentSnapshot document) {
+    return Stack(
+      alignment: Alignment.center,
+      children: <Widget>[
+        Container(
+          color: Colors.grey[600],
         ),
-      ),
+        Text(
+          document['name'],
+          style: TextStyle(fontSize: 18.0),
+        )
+      ],
+    );
+  }
+
+  Image buildTitleImage(DocumentSnapshot document) {
+    return Image.network(
+      document['image'],
+      width: 200,
+      fit: BoxFit.fitWidth,
     );
   }
 
@@ -195,4 +252,3 @@ class ChannelsList extends StatelessWidget {
         ));
   }
 }
-
