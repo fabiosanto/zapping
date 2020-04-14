@@ -19,7 +19,8 @@ class ChannelsList extends StatelessWidget {
         title: Text('Zapping'),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: Firestore.instance.collection('channels').snapshots(),
+        stream: Firestore.instance.collection('channels')
+            .where('country', isEqualTo: 'AU').snapshots(),
         builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.hasError) return new Text('Error: ${snapshot.error}');
 
@@ -40,6 +41,9 @@ class ChannelsList extends StatelessWidget {
   }
 
   void initTimeValue() {
+    //showing 12 movies for each day.
+    // more than that number will require more movies in db...
+
     var hour = now.hour;
 //    var hour = 2;
 
