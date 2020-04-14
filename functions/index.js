@@ -11,6 +11,9 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp();
 // [END import]
+const https = require('https');
+
+const tmdbApiKey = '933b65fca5ee88d5b921aa00f8d3e767';
 
 // [START addMessage]
 // Take the text parameter passed to this HTTP endpoint and insert it into
@@ -44,17 +47,74 @@ exports.addTitle = functions.https.onRequest(async (req, res) => {
   
   const db = admin.firestore();
 
-  db.collection('movies')
-          .add({
-            genre: [req.query.genre],
-            image: req.query.image,
-            nId: req.query.nId,
-            views: 0,
-            name: req.query.name,
-            country: [req.query.country]
-          })
 
-  res.json({ ok: 'added' });
+  https.get('https://api.themoviedb.org/3/search/movie?api_key='+tmdbApiKey+'&query='+req.query.name, (resp) => {
+    // The whole response has been received. Print out the result.
+    let titleObj = {
+      genre: [req.query.genre],
+      nId: req.query.nId,
+      views: 0,
+      name: req.query.name,
+      country: [req.query.country]
+    };
+    let data = '';
+
+      // A chunk of data has been recieved.
+      resp.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      resp.on('end', () => {
+        const jsonResponse = JSON.parse(data);
+        titleObj.image = 'https://image.tmdb.org/t/p/w400'+jsonResponse.results[0].poster_path
+        db.collection('movies').add(titleObj)
+        console.log('added', titleObj);
+
+      });
+  });
+
+  res.json({ ok: 'check log' });
+
+});
+
+exports.updatePosters = functions.https.onRequest(async (req, res) => {
+  
+  const db = admin.firestore();
+
+  db.collection('movies').get().then(snapshot => {
+    snapshot.forEach(doc => {
+      console.log('fetching...'+ doc.get('name'));
+
+      https.get('https://api.themoviedb.org/3/search/movie?api_key='+tmdbApiKey+'&query='+doc.get('name'), (resp) => {
+        // The whole response has been received. Print out the result.
+
+        let data = '';
+
+          // A chunk of data has been recieved.
+          resp.on('data', (chunk) => {
+            data += chunk;
+          });
+
+          resp.on('end', () => {
+            const jsonResponse = JSON.parse(data);
+            console.log(jsonResponse.results[0].poster_path);
+            console.log(jsonResponse.results[0].original_title);
+
+            db.collection('movies').doc(doc.id).update({
+              image: 'https://image.tmdb.org/t/p/w400'+jsonResponse.results[0].poster_path
+            })
+
+          });
+      });
+
+    });
+
+    
+    return;
+  }).catch(err => {
+    console.log('Error getting documents', err);  
+    res.json({ ok: 'error, check log' });
+  });
 
 });
 

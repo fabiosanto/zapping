@@ -87,10 +87,7 @@ class ChannelsList extends StatelessWidget {
         child: Column(
           children: <Widget>[
             buildChannelTitle(document),
-            buildScheduleTimeline(documents),
-            documents.isNotEmpty
-                ? buildMaterialButton(documents.first['nId'])
-                : Container()
+            buildScheduleTimeline(documents)
           ],
         ),
       ),
@@ -99,7 +96,7 @@ class ChannelsList extends StatelessWidget {
 
   Widget buildMaterialButton(String nId) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 0.0, vertical: 8),
       child: Row(
         children: <Widget>[
           MaterialButton(
@@ -121,7 +118,7 @@ class ChannelsList extends StatelessWidget {
       final AndroidIntent intent = AndroidIntent(
           action: 'action_view',
           data: Uri.encodeFull(
-              'http://www.netflix.com/watch/$title?t=liveMinute'),
+              'http://www.netflix.com/watch/$title?t=$liveMinute'),
           package: 'com.netflix.mediaclient');
       intent.launch();
     } catch (exc) {
@@ -143,7 +140,7 @@ class ChannelsList extends StatelessWidget {
 
   Widget buildScheduleTimeline(List<DocumentSnapshot> documents) {
     return Container(
-      height: 150,
+      height: 320,
       child: ListView(
         padding: EdgeInsets.fromLTRB(10, 0, 10, 0),
         scrollDirection: Axis.horizontal,
@@ -170,12 +167,13 @@ class ChannelsList extends StatelessWidget {
 
   Widget buildTitleTile(DocumentSnapshot document) {
     return Container(
-      width: 200,
+      padding: EdgeInsets.all(8.0),
+      width: 170,
       child: Column(
         children: <Widget>[
           buildTitleCard(document),
           buildSlider(document['slot']),
-          buildTime(document['slot'])
+          buildMaterialButton(document['nId'])
         ],
       ),
     );
@@ -197,8 +195,9 @@ class ChannelsList extends StatelessWidget {
 
   Widget buildTitleCard(DocumentSnapshot document) {
     return Container(
-        height: 110,
         child: Card(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(10))),
           clipBehavior: Clip.antiAlias,
           elevation: 0.0,
           child: MaterialButton(
@@ -206,7 +205,9 @@ class ChannelsList extends StatelessWidget {
             onPressed: () {
               launchTitleDetail(document['nId']);
             },
-            child: showNflixImages? buildTitleImage(document) : buildTitleImage2(document),
+            child: showNflixImages
+                ? buildTitleImage(document)
+                : buildTitleImage2(document),
           ),
         ));
   }
@@ -229,8 +230,8 @@ class ChannelsList extends StatelessWidget {
   Image buildTitleImage(DocumentSnapshot document) {
     return Image.network(
       document['image'],
-      width: 200,
-      fit: BoxFit.fitWidth,
+      height: 220,
+      fit: BoxFit.fitHeight,
     );
   }
 
@@ -239,7 +240,7 @@ class ChannelsList extends StatelessWidget {
     // liveMinute : 7200 = x : 1
     // x = liveMinute
 
-    if (slot == liveSlot) value = liveMinute / 7200;
+    if (true) value = liveMinute / 7200;
 
     return Padding(
         padding: EdgeInsets.fromLTRB(4, 6, 4, 0),
