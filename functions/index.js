@@ -33,11 +33,15 @@ exports.addMessage = functions.https.onRequest(async (req, res) => {
   
   //channel 7XfzrS9nrMtfN6IwI39w comedies
   channelId = '7XfzrS9nrMtfN6IwI39w';
-  generateSchedule(channelId, scheduleID, "Comedies");
+   generateSchedule(channelId, scheduleID, "Comedies");
 
   //jxcj9sx09Nc1JQBjR2Hg
   channelId = 'jxcj9sx09Nc1JQBjR2Hg';
-  generateSchedule(channelId, scheduleID, "Action");
+   generateSchedule(channelId, scheduleID, "Action");
+
+  //WbtAJAc4VtxBPS6txhYV Thrillers
+  channelId = 'WbtAJAc4VtxBPS6txhYV';
+   generateSchedule(channelId, scheduleID, "Thriller");
 
   res.json({ ok: 'finished' });
 
@@ -156,6 +160,7 @@ function generateSchedule(channelId, scheduleID, genre) {
           views: doc.get('views') + 1
         });
         console.log(doc.id, ' => ', doc.data());
+
         const obj = {
           image: doc.get('image'),
           nId: doc.get('nId'),

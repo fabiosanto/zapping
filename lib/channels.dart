@@ -7,6 +7,7 @@ class ChannelsList extends StatelessWidget {
   var scheduleId = '${now.year}${now.month}${now.day}';
   var liveSlot = 0.0;
   var liveMinute = 0.0;
+  var channelHeight = 550.0;
 
   @override
   Widget build(BuildContext context) {
@@ -19,23 +20,90 @@ class ChannelsList extends StatelessWidget {
         title: Text('Zapping'),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: Firestore.instance.collection('channels')
-            .where('country', isEqualTo: 'AU').snapshots(),
+        stream: Firestore.instance
+            .collection('channels')
+            .where('country', isEqualTo: 'AU')
+            .orderBy('position', descending: true)
+            .snapshots(),
         builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.hasError) return new Text('Error: ${snapshot.error}');
 
           switch (snapshot.connectionState) {
             case ConnectionState.waiting:
-              return new Text('Loading...');
+              return buildLoadingContainer();
             default:
               return ListView(
                 children:
                     snapshot.data.documents.map((DocumentSnapshot document) {
-                  return buildChannelTile(document);
+                  var type = document['type'];
+
+                  if (type == "title")
+                    return buildAppTitle(document);
+                  else if (type == "intro")
+                    return buildIntroCard(document);
+                  else //is a channel
+                    return buildChannelTile(document);
                 }).toList(),
               );
           }
         },
+      ),
+    );
+  }
+
+// The App recommends great movies to play like if you were zapping through them
+
+  Widget buildIntroCard(DocumentSnapshot document) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: Firestore.instance
+          .collection('channels')
+          .document(document.documentID)
+          .collection('pages')
+          .orderBy('index')
+          .snapshots(),
+      builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (snapshot.hasError) return new Text('Error: ${snapshot.error}');
+
+        switch (snapshot.connectionState) {
+          case ConnectionState.waiting:
+            return Container(
+              height: 160,
+              child: Text('loading pages'),
+            );
+          default:
+            return Container(
+              height: 160,
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(10, 10, 10, 10),
+                scrollDirection: Axis.horizontal,
+                children:
+                    snapshot.data.documents.map((DocumentSnapshot document) {
+                  return Container(
+                    width: 300,
+                    child: Card(
+                      child: Container(
+                          padding: EdgeInsets.all(16.0),
+                          alignment: Alignment.center,
+                          child: Text(
+                            document['text'],
+                            style: TextStyle(fontSize: 16),
+                          )),
+                    ),
+                  );
+                }).toList(),
+              ),
+            );
+        }
+      },
+    );
+  }
+
+  Container buildAppTitle(DocumentSnapshot document) {
+    return Container(
+      padding: EdgeInsets.all(16.0),
+      child: Text(
+        document['text'],
+        style: TextStyle(fontSize: 22),
       ),
     );
   }
@@ -74,11 +142,19 @@ class ChannelsList extends StatelessWidget {
 
         switch (snapshot.connectionState) {
           case ConnectionState.waiting:
-            return ListTile(title: new Text('Loading...'));
+            return buildLoadingContainer();
           default:
             return buildListItemContainer(document, snapshot.data.documents);
         }
       },
+    );
+  }
+
+  Container buildLoadingContainer() {
+    return Container(
+      height: channelHeight,
+      color: Colors.grey[800],
+      child: ListTile(title: new Text('Loading...')),
     );
   }
 
@@ -100,18 +176,30 @@ class ChannelsList extends StatelessWidget {
 
   Widget buildMaterialButton(String nId) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 0.0, vertical: 8),
       child: Row(
         children: <Widget>[
-          MaterialButton(
-            child: Text('Play'),
-            color: Colors.red[900],
-            shape: StadiumBorder(),
-            elevation: 0,
+          RaisedButton.icon(
+            color: Colors.redAccent[700],
             onPressed: () {
               launchTitle(nId, liveMinute.toInt());
             },
-          )
+            icon: Icon(Icons.flash_on),
+            label: Text('Zap'),
+            shape: StadiumBorder(),
+          ),
+          Container(
+            padding: EdgeInsets.fromLTRB(16, 0, 0, 0),
+            child: RaisedButton.icon(
+              elevation: 0.0,
+              color: Colors.grey[700],
+              onPressed: () {
+                launchTitle(nId, 0);
+              },
+              icon: Icon(Icons.play_arrow),
+              label: Text('Play'),
+              shape: StadiumBorder(),
+            ),
+          ),
         ],
       ),
     );
@@ -122,7 +210,7 @@ class ChannelsList extends StatelessWidget {
       final AndroidIntent intent = AndroidIntent(
           action: 'action_view',
           data: Uri.encodeFull(
-              'http://www.netflix.com/watch/$title?t=$liveMinute'),
+              'http://www.netflix.com/watch/${title}?t=${time}'),
           package: 'com.netflix.mediaclient');
       intent.launch();
     } catch (exc) {
@@ -144,7 +232,7 @@ class ChannelsList extends StatelessWidget {
 
   Widget buildScheduleTimeline(List<DocumentSnapshot> documents) {
     return Container(
-      height: 320,
+      height: channelHeight,
       child: ListView(
         padding: EdgeInsets.fromLTRB(10, 0, 10, 0),
         scrollDirection: Axis.horizontal,
@@ -172,10 +260,11 @@ class ChannelsList extends StatelessWidget {
   Widget buildTitleTile(DocumentSnapshot document) {
     return Container(
       padding: EdgeInsets.all(8.0),
-      width: 170,
+      width: 300,
       child: Column(
         children: <Widget>[
           buildTitleCard(document),
+          buildTime(document['slot']),
           buildSlider(document['slot']),
           buildMaterialButton(document['nId'])
         ],
@@ -183,39 +272,46 @@ class ChannelsList extends StatelessWidget {
     );
   }
 
+  //unused
   Container buildTime(int slot) {
+
+    var labelStart = '${slot * 2}.00';
+
+    labelStart = 'Live Now';
+
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0),
+      padding: EdgeInsets.fromLTRB(8, 12, 8, 0),
       alignment: Alignment.centerLeft,
       child: Text(
-        '${slot * 2}.00',
-        style: TextStyle(fontSize: 10.0),
+        labelStart,
+        style: TextStyle(fontSize: 14.0,
+        color: Colors.white70),
       ),
     );
   }
 
-  //feature flag here!
-  static const showNflixImages = true;
+  static const showTmdbImages = true;
 
   Widget buildTitleCard(DocumentSnapshot document) {
     return Container(
         child: Card(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(10))),
-          clipBehavior: Clip.antiAlias,
-          elevation: 0.0,
-          child: MaterialButton(
-            padding: EdgeInsets.all(0.0),
-            onPressed: () {
-              launchTitleDetail(document['nId']);
-            },
-            child: showNflixImages
-                ? buildTitleImage(document)
-                : buildTitleImage2(document),
-          ),
-        ));
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10))),
+      clipBehavior: Clip.antiAlias,
+      elevation: 10.0,
+      child: MaterialButton(
+        padding: EdgeInsets.all(0.0),
+        onPressed: () {
+          launchTitleDetail(document['nId']);
+        },
+        child: showTmdbImages
+            ? buildTitleImage(document)
+            : buildTitleImage2(document),
+      ),
+    ));
   }
 
+  //title card no image
   Widget buildTitleImage2(DocumentSnapshot document) {
     return Stack(
       alignment: Alignment.center,
@@ -231,10 +327,11 @@ class ChannelsList extends StatelessWidget {
     );
   }
 
+  //title card with image
   Image buildTitleImage(DocumentSnapshot document) {
     return Image.network(
       document['image'],
-      height: 220,
+      height: 420,
       fit: BoxFit.fitHeight,
     );
   }
@@ -246,14 +343,15 @@ class ChannelsList extends StatelessWidget {
 
     if (true) value = liveMinute / 7200;
 
-    return Padding(
-        padding: EdgeInsets.fromLTRB(4, 6, 4, 0),
-        child: SizedBox(
-          height: 3,
+    return Container(
+      padding: EdgeInsets.all(6.0),
+      child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
           child: LinearProgressIndicator(
             backgroundColor: Colors.grey[700],
+            valueColor: AlwaysStoppedAnimation(Colors.redAccent[700]),
             value: value,
-          ),
-        ));
+          )),
+    );
   }
 }

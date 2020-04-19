@@ -1,5 +1,5 @@
 name: zapping
-description: Zapping Netflix
+description: Zapping for Netflix
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -20,12 +20,12 @@ dependencies:
   firebase_core: ^0.4.0+9
   # Add the dependency for the FlutterFire plugin for Google Analytics
   firebase_analytics: ^5.0.2
-
   # Add the dependencies for any other Firebase products you want to use in your app
   # For example, to use Firebase Authentication and Cloud Firestore
   cloud_firestore: ^0.12.9+5
   flutter:
     sdk: flutter
+  shared_preferences: ^0.5.6+3
   android_intent: ^0.3.6+1
 
   # The following adds the Cupertino Icons font to your application.

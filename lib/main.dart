@@ -10,7 +10,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
+        primaryColorBrightness: Brightness.dark,
         brightness: Brightness.dark,
+
         // This is the theme of your application.
         //
         // Try running your application with "flutter run". You'll see the
@@ -21,7 +23,7 @@ class MyApp extends StatelessWidget {
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
         primaryColor:Colors.grey[800],
-        accentColor: Colors.red[900],
+        accentColor: Colors.white,
       ),
       home: ChannelsList(),
     );
