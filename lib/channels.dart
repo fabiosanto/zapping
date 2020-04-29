@@ -3,51 +3,61 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class ChannelsList extends StatelessWidget {
-  static var now = new DateTime.now();
-  var scheduleId = '${now.year}${now.month}${now.day}';
-  var liveSlot = 0.0;
-  var liveMinute = 0.0;
-  var channelHeight = 550.0;
-
   @override
   Widget build(BuildContext context) {
-    initTimeValue();
-
     return Scaffold(
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
         title: Text('Zapping'),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: Firestore.instance
-            .collection('channels')
-            .where('country', isEqualTo: 'AU')
-            .orderBy('position', descending: true)
-            .snapshots(),
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.hasError) return new Text('Error: ${snapshot.error}');
+      body: ChannelsPage(),
+    );
+  }
+}
 
-          switch (snapshot.connectionState) {
-            case ConnectionState.waiting:
-              return buildLoadingContainer();
-            default:
-              return ListView(
-                children:
-                    snapshot.data.documents.map((DocumentSnapshot document) {
-                  var type = document['type'];
+class ChannelsPage extends StatelessWidget {
+  static var now = new DateTime.now();
+  var scheduleId = '${now.year}${now.month}${now.day}';
+  var liveSlot = 0.0;
+  var liveMinute = 0.0;
+  var channelHeight = 550.0;
 
-                  if (type == "title")
-                    return buildAppTitle(document);
-                  else if (type == "intro")
-                    return buildIntroCard(document);
-                  else //is a channel
-                    return buildChannelTile(document);
-                }).toList(),
-              );
-          }
-        },
-      ),
+  var context;
+
+  @override
+  Widget build(BuildContext context) {
+    this.context = context;
+    initTimeValue();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: Firestore.instance
+          .collection('channels')
+          .where('country', isEqualTo: 'AU')
+          .orderBy('position', descending: true)
+          .snapshots(),
+      builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (snapshot.hasError) return new Text('Error: ${snapshot.error}');
+
+        switch (snapshot.connectionState) {
+          case ConnectionState.waiting:
+            return buildLoadingContainer();
+          default:
+            return ListView(
+              children:
+                  snapshot.data.documents.map((DocumentSnapshot document) {
+                var type = document['type'];
+
+                if (type == "title")
+                  return buildAppTitle(document);
+                else if (type == "intro")
+                  return buildIntroCard(document);
+                else //is a channel
+                  return buildChannelTile(document);
+              }).toList(),
+            );
+        }
+      },
     );
   }
 
@@ -209,13 +219,19 @@ class ChannelsList extends StatelessWidget {
     try {
       final AndroidIntent intent = AndroidIntent(
           action: 'action_view',
-          data: Uri.encodeFull(
-              'http://www.netflix.com/watch/${title}?t=${time}'),
+          data:
+              Uri.encodeFull('http://www.netflix.com/watch/${title}?t=${time}'),
           package: 'com.netflix.mediaclient');
       intent.launch();
     } catch (exc) {
       print(exc);
+      showAppNotInstalledSnackBar();
     }
+  }
+
+  void showAppNotInstalledSnackBar() {
+    final snackBar = SnackBar(content: Text('You need the Netflix app and an active subscription to play this movie.'));
+    Scaffold.of(context).showSnackBar(snackBar);
   }
 
   void launchTitleDetail(String title) {
@@ -227,6 +243,7 @@ class ChannelsList extends StatelessWidget {
       intent.launch();
     } catch (exc) {
       print(exc);
+      showAppNotInstalledSnackBar();
     }
   }
 
@@ -274,7 +291,6 @@ class ChannelsList extends StatelessWidget {
 
   //unused
   Container buildTime(int slot) {
-
     var labelStart = '${slot * 2}.00';
 
     labelStart = 'Live Now';
@@ -284,8 +300,7 @@ class ChannelsList extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Text(
         labelStart,
-        style: TextStyle(fontSize: 14.0,
-        color: Colors.white70),
+        style: TextStyle(fontSize: 14.0, color: Colors.white70),
       ),
     );
   }

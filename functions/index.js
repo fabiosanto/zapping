@@ -18,9 +18,9 @@ const tmdbApiKey = '933b65fca5ee88d5b921aa00f8d3e767';
 // [START addMessage]
 // Take the text parameter passed to this HTTP endpoint and insert it into
 // Cloud Firestore under the path /messages/:documentId/original
-// [START addMessageTrigger]
+// [START addMessageTrig ger]
 exports.addMessage = functions.https.onRequest(async (req, res) => {
-  
+
   const year = new Date().getFullYear();
   const month = new Date().getMonth() + 1;
   const day = new Date().getDate();
@@ -142,6 +142,7 @@ function generateSchedule(channelId, scheduleID, genre) {
 
   const totalSlot = 12;
   const startSlot = 0;
+  console.log('starting...'+ genre);
 
   let movies = db.collection('movies')
     movies.where("genre", 'array-contains', genre)
@@ -159,7 +160,7 @@ function generateSchedule(channelId, scheduleID, genre) {
         db.collection('movies').doc(doc.id).update({
           views: doc.get('views') + 1
         });
-        console.log(doc.id, ' => ', doc.data());
+//        console.log(doc.id, ' => ', doc.data());
 
         const obj = {
           image: doc.get('image'),
@@ -170,10 +171,10 @@ function generateSchedule(channelId, scheduleID, genre) {
         // console.log('creating...', obj);
         db.collection('channels/' + channelId + '/schedule/' + scheduleID + '/slots').add(obj);
         index++;
-        console.log('new doc created');
+        console.log('...created '+scheduleID+' / '+obj.name);
       });
+      console.log('finished...');
 
-      console.log('finished');
       return;
     })
     .catch(err => {

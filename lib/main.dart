@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
         primaryColor:Colors.grey[800],
-        accentColor: Colors.white,
+        accentColor: Colors.blueGrey[50],
       ),
       home: ChannelsList(),
     );
