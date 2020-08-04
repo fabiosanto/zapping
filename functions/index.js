@@ -62,7 +62,7 @@ exports.addTitle = functions.https.onRequest(async (req, res) => {
   db.collection('movies').where('nId', '==', titleObj.nId).get().then(snapshot => {
     if (snapshot.empty) {
       console.log('No matching documents.');
-      fetchImageAndAdd(titleObj, db);
+      a(titleObj);
       return;
     }
 
@@ -77,6 +77,62 @@ exports.addTitle = functions.https.onRequest(async (req, res) => {
   res.json({ ok: 'check log' });
 
 });
+
+async function isExistingTitle(id) {
+  const db = admin.firestore();
+
+  return db.collection('movies').where('nId', '==', id).get().then(snapshot => {
+    if (snapshot.empty) {
+      console.log('No matching documents.');
+      return false;
+    }
+
+    console.log('already added, skipping');
+    return true;
+  }).catch(err => {
+    console.log('Error getting documents', err);      
+    return true;
+  });
+}
+
+exports.startScrape = functions.https.onRequest(async (req, res) => {
+
+  const apiUrl = 'https://simplescraper.io/api/2YfugZqeu3K20A2MaoRs?apikey=KUrttY9MTmGxVWO5gK1d96wyLC0UZSYA&offset=0&limit=100';
+
+  fetchScrapeAPI(apiUrl, 'Action', 'US')
+
+  res.json({ ok: 'check log' });
+
+});
+
+function fetchScrapeAPI(apiUrl, genreId, countryId) {
+  https.get(apiUrl, (resp) => {
+    let data = '';
+    resp.on('data', (chunk) => {
+      data += chunk;
+    });
+    resp.on('end', () => {
+      const jsonResponse = JSON.parse(data);
+
+      jsonResponse.data.forEach(item => {
+
+        let doesExist = await isExistingTitle(item.movie_link);
+
+        if(!doesExist){
+          let titleObj = {
+            genre: [genreId],
+            nId: item.movie_link,
+            views: 0,
+            name: item.movie,
+            country: [countryId]
+          };
+  
+          a(titleObj);
+        }
+      });
+    });
+  });
+}
 
 exports.updatePosters = functions.https.onRequest(async (req, res) => {
   
@@ -102,7 +158,7 @@ exports.updatePosters = functions.https.onRequest(async (req, res) => {
             // console.log(jsonResponse.results[0].original_title);
 
             db.collection('movies').doc(doc.id).update({
-              image: 'https://image.tmdb.org/t/p/w400'+jsonResponse.results[0].poster_path
+              image: 'https://image.tmdb.org/t/p/w780'+jsonResponse.results[0].poster_path
             })
 
           });
@@ -119,7 +175,8 @@ exports.updatePosters = functions.https.onRequest(async (req, res) => {
 
 });
 
-function fetchImageAndAdd(titleObj, db) {
+function a(titleObj) {
+
   https.get('https://api.themoviedb.org/3/search/movie?api_key=' + tmdbApiKey + '&query=' + titleObj.name, (resp) => {
     // The whole response has been received. Print out the result.
     let data = '';
@@ -128,8 +185,10 @@ function fetchImageAndAdd(titleObj, db) {
       data += chunk;
     });
     resp.on('end', () => {
+      const db = admin.firestore();
+
       const jsonResponse = JSON.parse(data);
-      titleObj.image = 'https://image.tmdb.org/t/p/w400' + jsonResponse.results[0].poster_path;
+      titleObj.image = 'https://image.tmdb.org/t/p/w780' + jsonResponse.results[0].poster_path;
       db.collection('movies').add(titleObj);
       console.log('added', titleObj);
     });
