@@ -33,7 +33,6 @@ class ChannelsPage extends StatelessWidget {
     return StreamBuilder<QuerySnapshot>(
       stream: Firestore.instance
           .collection('channels')
-          .where('country', isEqualTo: 'AU')
           .orderBy('position', descending: true)
           .snapshots(),
       builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
@@ -43,23 +42,47 @@ class ChannelsPage extends StatelessWidget {
           case ConnectionState.waiting:
             return buildLoadingContainer();
           default:
-            return ListView(
-              children:
-                  snapshot.data.documents.map((DocumentSnapshot document) {
-                var type = document['type'];
-
-                if (type == "title")
-                  return buildAppTitle(document);
-                else if (type == "intro")
-                  return buildIntroCard(document);
-                else //is a channel
-                  return buildChannelTile(document);
-              }).toList(),
+            return GridView.custom(
+              gridDelegate:
+                  SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
+              childrenDelegate: SliverChildListDelegate(
+                snapshot.data.documents.map((DocumentSnapshot document) {
+                  return buildChannelButton(document);
+                }).toList(),
+              ),
             );
         }
       },
     );
   }
+
+  Card buildChannelButton(DocumentSnapshot document) {
+    return Card(
+      child: MaterialButton(
+        onPressed: () {
+          setChannel(document);
+        },
+        color: Colors.amber,
+        child: Text(
+          document['name'],
+          style: TextStyle(fontSize: 16),
+        ),
+      ),
+    );
+  }
+
+  void setChannel(DocumentSnapshot document) {
+    Firestore.instance
+        .collection('tv')
+        .document('vvEpa3p2by8lUqNwpzmH')
+        .updateData({
+              'current': document['name'],
+              'channelId': document.documentID
+        });
+  }
+
+  // old netflix stuff v
+  // from here down
 
 // The App recommends great movies to play like if you were zapping through them
 
@@ -230,7 +253,9 @@ class ChannelsPage extends StatelessWidget {
   }
 
   void showAppNotInstalledSnackBar() {
-    final snackBar = SnackBar(content: Text('You need the Netflix app and an active subscription to play this movie.'));
+    final snackBar = SnackBar(
+        content: Text(
+            'You need the Netflix app and an active subscription to play this movie.'));
     Scaffold.of(context).showSnackBar(snackBar);
   }
 
