@@ -4,6 +4,12 @@ import './App.css';
 import fire from './firebase'
 import YouTube from 'react-youtube';
 import loading from './loading.gif';
+import {
+  BrowserView,
+  MobileView,
+  isBrowser,
+  isMobile
+} from "react-device-detect";
 
 class App extends React.Component{
 
@@ -15,8 +21,14 @@ class App extends React.Component{
       isLoading: true,
       joinCode: null,
       channels: null,
-      userId: null
+      userId: null,
+      remoteJoin: false,
+      readyToZap: false,
+      joinCodeValue: ""
     };
+
+    this.handleChange = this.handleChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
   }
 
   componentDidMount(){
@@ -29,8 +41,53 @@ class App extends React.Component{
           userId: x.user.uid
         })
 
-        this.loadChannel('vvEpa3p2by8lUqNwpzmH')
+        if(isMobile) {
+          this.loadRemote(x.user.uid)
+        } else {
+          this.loadChannel(x.user.uid)
+        }
+
       })
+  }
+
+  async loadChannels(){
+    const channels = await fire.firestore()
+    .collection('channels')
+    .get()
+
+    //console.log(channels.docs)
+     const data = channels.docs;
+        this.setState({
+          channels: data
+        })
+  }
+
+  loadRemote(remoteId){
+    const doc = fire.firestore()
+          .collection('remotes')
+          .doc(remoteId)
+
+          doc.onSnapshot(docSnapshot => {
+            const data = docSnapshot.data();
+
+            if(data == null){
+              // no remote found
+              // show join with code
+              this.setState({
+                remoteJoin : true
+              })
+            } else {
+                //remote found 
+
+                const tvId = data.tvId
+                this.setState({
+                  userId : tvId
+                })
+
+                this.loadChannels();
+            }
+
+          }); 
   }
 
   loadChannel(userId) {
@@ -51,29 +108,43 @@ class App extends React.Component{
           isLoading: true
         })
 
-        fire.firestore()
-          .collection('tv')
-          .doc(userId)
-          .set({
-            channelId: null
-          })
+        // create new user TV
 
-      } else if (!data.channelId){
+        fire.firestore()
+        .collection('tv')
+        .doc(userId)
+        .set({
+          channelId: null
+        })
+
+      } else if (!data.remoteId && !data.channelId){
         // no active channel found
         // show how to and join code
 
         const code = Math.floor(Math.random() * 100) + 10
         const code2 = Math.floor(Math.random() * 100) + 10
 
+        const joinCode = code + "" + code2;
+
         this.setState({
           channelId: null,
           isLoading: false,
-          joinCode: code + "" + code2
+          videoId: null,
+          joinCode: joinCode
         })
 
-      } else {
+        fire.firestore()
+        .collection('joins')
+        .doc()
+        .set({
+          code: joinCode,
+          userId: userId
+        })
+
+      } else if(data.channelId){
         // active channel found
         // play channel
+
         const channelId = data.channelId
 
         this.setState({
@@ -84,6 +155,15 @@ class App extends React.Component{
   
         this.loadVideo(channelId)
 
+      } else {
+        //remote is available but no channel is active
+        this.setState({
+          readyToZap: true,
+          channelId: null,
+          joinCode: null,
+          videoId: null,
+          isLoading: false
+        })
       }
     }, err => {
       console.log(`Encountered error: ${err}`);
@@ -96,7 +176,6 @@ class App extends React.Component{
     .doc(channelId)
     .get()
 
-    console.log(`channelId ${channelId}`);
     const collection = channel.data().collection
     if(!collection) return
 
@@ -104,7 +183,6 @@ class App extends React.Component{
     .collection(collection)
     .get() 
 
-    
     const videoId = videos.docs[Math.floor(Math.random() * videos.docs.length)].data().ytube
     console.log(videoId)
 
@@ -113,12 +191,72 @@ class App extends React.Component{
     })
   }
 
+  setActiveChannel(id){
+    const tvId = this.state.userId
+
+    console.log(id)
+    fire.firestore()
+    .collection('tv')
+    .doc(tvId)
+    .update({
+      channelId: id
+    })
+  }
+
+  // join form
+  handleChange(event) {
+    this.setState({joinCodeValue: event.target.value});
+  }
+
+  handleSubmit(event) {
+    const joinCode = this.state.joinCodeValue;
+
+    fire.firestore()
+      .collection('joins')
+      .where("code", "==", joinCode)
+      .get()
+      .then(snap => {
+          if(!snap.isEmpty) {
+            console.log(snap)
+            const tvId = snap.docs[0].data().userId;
+            const remoteId = this.state.userId;
+
+              fire.firestore()
+              .collection('remotes')
+              .doc(remoteId)
+              .set({
+                tvId: tvId
+              })
+
+              fire.firestore()
+              .collection('tv')
+              .doc(tvId)
+              .set({
+                remoteId: remoteId,
+                channelId: null
+              })
+
+              this.setState({
+                remoteJoin: false
+              })
+              
+          } else {
+            alert('there`s no tv with given code waiting for you');
+          }
+      })
+
+    event.preventDefault();
+  }
+
   render() {
 
-    const videoId = this.state.videoId
     const isLoading = this.state.isLoading
     const joinCode = this.state.joinCode
     const userId = this.state.userId
+    const videoId = this.state.videoId
+    const channels = this.state.channels
+    const remoteJoin = this.state.remoteJoin
+    const readyToZap = this.state.readyToZap
 
     const opts = {
       height: '900',
@@ -132,33 +270,70 @@ class App extends React.Component{
     };
 
     return (
-      <div className="App">
-        {videoId? 
-        <YouTube
-          onPlay={event => {
-            this.setState({
-              isLoading: false
-            })
-          }}
-          videoId={videoId}
-          opts={opts}   
-        /> : null}
-        {
-          isLoading ? <div className="loading">
-            <img src={loading}/>
-          </div> : null
-        }
-        {
-          joinCode ? 
-          <div className="join">
-            <p>Hey Welcome!</p>
-            <p>To tune in visit this website from your mobile phone and join with the code</p>
-            <p><h1>{joinCode}</h1></p>
-            <p><h1>{userId}</h1></p>
-          </div> : null
-        }
-
-      </div>
+      <div>
+        <BrowserView>
+              <div className="player">
+                {videoId? 
+                    <YouTube
+                    onPlay={event => {
+                      this.setState({
+                        isLoading: false
+                      })
+                    }}
+                    videoId={videoId}
+                    opts={opts}   
+                  /> : null}
+                {
+                  isLoading ? <div className="loading">
+                    <img src={loading}/>
+                  </div> : null
+                }
+                {
+                  joinCode ? 
+                  <div className="join">
+                    <p>Hey Welcome!</p>
+                    <p>To tune in visit this website from your mobile phone and join with the code</p>
+                    <h1>{joinCode}</h1>
+                    <h1>{userId}</h1>
+                  </div> : null
+                }
+                {
+                  readyToZap ? 
+                  <div className="join">
+                    <p>You made it!</p>
+                    <p>Select a channel from your mobile and start zapping the web!</p>
+                  </div> : null
+                }
+              </div>
+        </BrowserView>
+        <MobileView>
+            <div className="remote">
+              { channels ? 
+                <div className="channels">
+                  <ul>
+                      {channels.map(item => 
+                        <a href="#" onClick={()=> this.setActiveChannel(item.id)}><li>{item.data().name}</li></a>
+                      )}
+                  </ul>
+                </div> : null
+              }
+              {
+                  remoteJoin ? 
+                  <div className="join">
+                    <p>Hey Welcome!</p>
+                    <p>To join in visit this website and enter the join code below</p>
+                    <form onSubmit={this.handleSubmit}>
+                      <label>
+                        Name:
+                        <input type="text" value={this.state.joinCodeValue} onChange={this.handleChange} />
+                      </label>
+                      <input type="submit" value="Submit" />
+                    </form>
+                  </div> : null
+                }
+            </div>
+        </MobileView>
+  </div>
     );
   }
 }
