@@ -249,7 +249,6 @@ class App extends React.Component{
   }
 
   render() {
-
     const isLoading = this.state.isLoading
     const joinCode = this.state.joinCode
     const userId = this.state.userId
@@ -259,8 +258,8 @@ class App extends React.Component{
     const readyToZap = this.state.readyToZap
 
     const opts = {
-      height: '900',
-      width: '100%',
+      height: window.innerHeight,
+      width:  window.innerWidth,
       playerVars: { // https://developers.google.com/youtube/player_parameters
         autoplay: 1,
         color: 'white',
@@ -270,9 +269,9 @@ class App extends React.Component{
     };
 
     return (
-      <div>
+      <div className="parent">
+        <div className="brandline"/>
         <BrowserView>
-              <div className="player">
                 {videoId? 
                     <YouTube
                     onPlay={event => {
@@ -285,49 +284,44 @@ class App extends React.Component{
                   /> : null}
                 {
                   isLoading ? <div className="loading">
-                    <img src={loading}/>
+                    <img className="loading-image" src={loading}/>
                   </div> : null
                 }
                 {
                   joinCode ? 
                   <div className="join">
-                    <p>Hey Welcome!</p>
+                    <h1 className="nineties">Hey Welcome!</h1>
                     <p>To tune in visit this website from your mobile phone and join with the code</p>
-                    <h1>{joinCode}</h1>
-                    <h1>{userId}</h1>
+                    <h1 className="nineties">{joinCode}</h1>
                   </div> : null
                 }
                 {
                   readyToZap ? 
                   <div className="join">
-                    <p>You made it!</p>
+                    <h1 className="nineties">You made it!</h1>
                     <p>Select a channel from your mobile and start zapping the web!</p>
                   </div> : null
                 }
-              </div>
         </BrowserView>
         <MobileView>
             <div className="remote">
               { channels ? 
-                <div className="channels">
-                  <ul>
+                  <div className="channels">
                       {channels.map(item => 
-                        <a href="#" onClick={()=> this.setActiveChannel(item.id)}><li>{item.data().name}</li></a>
+                        <div className="channel"><a href="#" onClick={()=> this.setActiveChannel(item.id)}>{item.data().name}</a></div>
                       )}
-                  </ul>
-                </div> : null
+                  </div> : null
               }
               {
                   remoteJoin ? 
                   <div className="join">
-                    <p>Hey Welcome!</p>
-                    <p>To join in visit this website and enter the join code below</p>
+                    <h1 className="nineties">Hey Welcome!</h1>
+                    <p>Do you have your TV code yet?</p>
                     <form onSubmit={this.handleSubmit}>
-                      <label>
-                        Name:
-                        <input type="text" value={this.state.joinCodeValue} onChange={this.handleChange} />
-                      </label>
-                      <input type="submit" value="Submit" />
+                      <p>
+                        <input className="codeInput" type="text" value={this.state.joinCodeValue} onChange={this.handleChange} />
+                        <input className="submitButton" type="submit" value="Join" />
+                      </p>
                     </form>
                   </div> : null
                 }

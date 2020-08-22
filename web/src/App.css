@@ -12,10 +12,19 @@
 html, body {
   margin: 0;
   height: 100%;
+  background: #000d2d;
+  color: #dad0c4;
+  font-family: 'Sriracha', cursive;
+}
+.nineties{
+  text-shadow:  #ff0048 4px 2px;
 }
 #root{
   margin: 0;
   height: 100%;
+}
+a{
+  color: antiquewhite;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -39,10 +48,68 @@ html, body {
   color: #61dafb;
 }
 
+.parent{
+  width: 100%;
+  height: 100%;
+}
+
 .loading{
   position: absolute;
-  top: 50px;
-  left: 100px;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+.loading-image{
+  height: inherit;
+  width: inherit;
+}
+
+.parent {
+  display: grid;
+  place-items: center;
+}
+
+.join{
+  font-size: 22px;
+}
+
+.codeInput{
+  border-radius: 10px;
+  font-size: 26px;
+  width: 100px;
+  text-align: center;
+  font-family: 'Sriracha', cursive;
+  background: #cbd0d4;
+}
+
+.submitButton{
+  border-radius: 10px;
+  font-size: 20px;
+  width: 100px;
+  text-align: center;
+  font-family: 'Sriracha', cursive;
+  background: #282c34;
+  color: #ff0048;
+  margin-left: 20px;
+}
+
+.brandline{
+  position: absolute;
+  top: 0;
+  background: url(/brandline.jpg);
+  height: 5px;
+  width: 100%;
+  background-position: top;
+  background-size: cover;
+}
+.channels{
+  display: grid;
+  grid-gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.channel{
+  font-size: 30px;
 }
 
 @keyframes App-logo-spin {
