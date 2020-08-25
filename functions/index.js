@@ -1,4 +1,10 @@
 const functions = require('firebase-functions');
+const {google} = require('googleapis');
+// initialize the Youtube API library
+const youtube = google.youtube({
+  version: 'v3',
+  auth: 'AIzaSyAcmTpa5cVpYPpYhr5bL-88ZH5n3suUSc8'
+});
 
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
@@ -99,7 +105,7 @@ const tmdbApiKey = '933b65fca5ee88d5b921aa00f8d3e767';
 
 exports.addSport = functions.https.onRequest(async (req, res) => {
   
-  addToDb('sports', req.query.id)
+  await addYTVideo('sports', req.query.id)
 
   res.json({ ok: 'finished' });
 
@@ -107,7 +113,7 @@ exports.addSport = functions.https.onRequest(async (req, res) => {
 
 exports.addDoc = functions.https.onRequest(async (req, res) => {
   
-  addToDb('documentaries', req.query.id)
+  await addYTVideo('documentaries', req.query.id)
 
   res.json({ ok: 'finished' });
 
@@ -115,7 +121,7 @@ exports.addDoc = functions.https.onRequest(async (req, res) => {
 
 exports.addNature = functions.https.onRequest(async (req, res) => {
   
-  addToDb('nature', req.query.id)
+  await addYTVideo('nature', req.query.id)
 
   res.json({ ok: 'finished' });
 
@@ -123,7 +129,7 @@ exports.addNature = functions.https.onRequest(async (req, res) => {
 
 exports.addComedies= functions.https.onRequest(async (req, res) => {
   
-  addToDb('comedies', req.query.id)
+  await addYTVideo('comedies', req.query.id)
 
   res.json({ ok: 'finished' });
 
@@ -131,11 +137,93 @@ exports.addComedies= functions.https.onRequest(async (req, res) => {
 
 exports.addShorts = functions.https.onRequest(async (req, res) => {
   
-  addToDb('shorts', req.query.id)
+  await addYTVideo('shorts', req.query.id)
 
   res.json({ ok: 'finished' });
 
 })
+
+exports.generate = functions.https.onRequest(async (req, res) => {
+  
+  var dateObj = new Date();
+  var month = dateObj.getUTCMonth() + 1; //months from 1-12
+  var day = dateObj.getUTCDate();
+  var year = dateObj.getUTCFullYear();
+
+  const path = 'channels/' + '7XfzrS9nrMtfN6IwI39w/' + 'schedule/' + year + '/' + month + '/' + day + '/' + 'items/';
+  const db = admin.firestore();
+
+  const snap = await db.collection('documentaries').get()
+  
+  if(snap.empty){
+      res.json({ error: 'no videos here' });
+      return;
+  }
+
+  const batch = db.batch();
+  const dayRef = db.collection(path);
+
+  const daySchedule = getSchedule(snap);
+  daySchedule.forEach(item => {
+    dayRef.add(item)
+    console.log('Adding to item -> '+ path);
+  })    
+
+  await batch.commit();
+
+  res.json({ result: 'ok', docCreated: daySchedule.length });
+})
+
+function getSchedule(snap){
+  const dayTotalSecs = 24 * 60 * 60
+  var durationTotal = 0;
+  var schedule = [];
+  while (durationTotal < dayTotalSecs) {
+    const item = getRandomItem(snap.docs).data();
+    schedule.push({
+      id: item.ytube,
+      title: item.title,
+      duration: item.duration,
+      thumb: item.thumb
+    })
+
+    durationTotal += getSecondsDuration(item.duration);
+  }
+
+  return schedule;
+}
+
+function getRandomItem(array){
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function getSecondsDuration(isoDuration){
+  // example PT 1H 26M 40S -> 1|26|40
+  const formattedTime = isoDuration.replace("PT","").replace("H","|").replace("M","|").replace("S","");
+  const timeSplit = formattedTime.split('|');
+
+  const hours = parseInt(timeSplit[0]);
+  const mins = parseInt(timeSplit[1]);
+  const secs = parseInt(timeSplit[2]);
+
+  return (hours * 60 * 60) + (mins * 60) + secs;
+}
+
+async function addYTVideo(collection, video){
+  let videoId = '';
+
+    if(video.startsWith('https')) {
+      videoId = video.split('v=')[1]
+    } else {
+      videoId = video
+    }
+
+    const res = await youtube.videos.list({
+        part: 'snippet,contentDetails',
+        id: videoId});
+
+    await addToDbYT(collection, res.data.items[0])
+}
 
 function addToDb(collection, url){
 
@@ -156,7 +244,26 @@ function addToDb(collection, url){
   }).catch(err => {
     console.log(err)
   })
+}
 
+
+async function addToDbYT(collection, data){
+
+  const db = admin.firestore();
+
+  const snap = await db.collection(collection).where('ytube', '==', data.id).get()
+    if(snap.empty) {
+      db.collection(collection)
+          .add({
+            ytube: data.id,
+            duration: data.contentDetails.duration,
+            title: data.snippet.title,
+            desc: data.snippet.description,
+            thumb: data.snippet.thumbnails.standard.url,
+            lang: data.snippet.defaultAudioLanguage || ''
+          })
+      console.log('Adding to '+ collection+ ' -> ' + snap.id);
+  }
 }
 
 // exports.addTitle = functions.https.onRequest(async (req, res) => {
