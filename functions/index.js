@@ -143,6 +143,59 @@ exports.addShorts = functions.https.onRequest(async (req, res) => {
 
 })
 
+exports.whatsLive = functions.https.onRequest(async (req, res) => {
+  
+  const channelId = req.query.channelId;
+  const datetime = req.query.datetime;
+
+  // 2020-8-29-21-48-43
+  const datetimeSplit = datetime.split('-');
+
+  var month = datetimeSplit[1];
+  var day = datetimeSplit[2];
+  var year = datetimeSplit[0];
+
+  var hours = datetimeSplit[3];
+  var minutes = datetimeSplit[4];
+  var seconds = datetimeSplit[5];
+
+  const db = admin.firestore();
+
+  const snap = await db.collection('channels')
+                        .doc(channelId)
+                        .collection('schedule')
+                        .doc(year.toString())
+                        .collection('months')
+                        .doc(month.toString())
+                        .collection('days')
+                        .doc(day.toString())
+                        .collection('items')
+                        .get()
+  if(snap.empty){
+    res.json({ error: 'no videos here' });
+    return;
+  }
+
+  const liveSeconds = (parseInt(hours) * 60 * 60) + (parseInt(minutes) * 60) + parseInt(seconds); 
+  var durationTotal = 0;
+  let liveItemIndex = -1;
+  let liveTimePassed = 0;
+
+  var index = -1;
+  do {
+    index++;
+    durationTotal += getSecondsDuration(snap.docs[index].data().duration);
+    console.log(durationTotal + ' - ' + liveSeconds);
+  } while(durationTotal < liveSeconds)
+
+  liveItemIndex = index;
+  liveTimePassed = durationTotal - liveSeconds;
+
+  const videoTimeLive = getSecondsDuration(snap.docs[liveItemIndex].data().duration) - liveTimePassed;
+
+  res.json({ ok: 'finished', liveItemIndex: liveItemIndex, liveTimePassed: videoTimeLive});
+})
+
 exports.generate = functions.https.onRequest(async (req, res) => {
   
   var dateObj = new Date();
@@ -150,7 +203,6 @@ exports.generate = functions.https.onRequest(async (req, res) => {
   var day = dateObj.getUTCDate();
   var year = dateObj.getUTCFullYear();
 
-  const path = 'channels/' + '7XfzrS9nrMtfN6IwI39w/' + 'schedule/' + 2021 + '/' + month + '/' + day + '/' + 'items/';
   const channelPath = 'channels/' + '7XfzrS9nrMtfN6IwI39w';
 
   const db = admin.firestore();
@@ -166,21 +218,20 @@ exports.generate = functions.https.onRequest(async (req, res) => {
   const channelRef = db.doc(channelPath);
 
   const yearRef = channelRef.collection('schedule').doc(year.toString());
-  batch.create(yearRef, {});
+  batch.set(yearRef, {}, {merge: true});
 
   const monthRef = yearRef.collection('months').doc(month.toString());
-  batch.create(monthRef, {})
+  batch.set(monthRef, {}, {merge: true})
 
   const dayRef = monthRef.collection('days').doc(day.toString());
-  batch.create(dayRef, {})
+  batch.set(dayRef, {}, {merge: true})
 
   const dayScheduleRef = dayRef.collection('items');
 
   const daySchedule = getSchedule(snap);
   daySchedule.forEach(item => {
     batch.create(dayScheduleRef.doc(), item); 
-    // dayRef.add(item)
-    console.log('Adding to item -> '+ path);
+    console.log('Adding to item -> '+ channelPath);
   })    
 
   await batch.commit();
@@ -192,7 +243,7 @@ function getSchedule(snap){
   const dayTotalSecs = 24 * 60 * 60
   var durationTotal = 0;
   var schedule = [];
-  while (durationTotal < dayTotalSecs) {
+  while (durationTotal <= dayTotalSecs) {
     const item = getRandomItem(snap.docs).data();
     schedule.push({
       id: item.ytube,
