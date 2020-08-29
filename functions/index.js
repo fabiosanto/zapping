@@ -150,7 +150,9 @@ exports.generate = functions.https.onRequest(async (req, res) => {
   var day = dateObj.getUTCDate();
   var year = dateObj.getUTCFullYear();
 
-  const path = 'channels/' + '7XfzrS9nrMtfN6IwI39w/' + 'schedule/' + year + '/' + month + '/' + day + '/' + 'items/';
+  const path = 'channels/' + '7XfzrS9nrMtfN6IwI39w/' + 'schedule/' + 2021 + '/' + month + '/' + day + '/' + 'items/';
+  const channelPath = 'channels/' + '7XfzrS9nrMtfN6IwI39w';
+
   const db = admin.firestore();
 
   const snap = await db.collection('documentaries').get()
@@ -161,11 +163,23 @@ exports.generate = functions.https.onRequest(async (req, res) => {
   }
 
   const batch = db.batch();
-  const dayRef = db.collection(path);
+  const channelRef = db.doc(channelPath);
+
+  const yearRef = channelRef.collection('schedule').doc(year.toString());
+  batch.create(yearRef, {});
+
+  const monthRef = yearRef.collection('months').doc(month.toString());
+  batch.create(monthRef, {})
+
+  const dayRef = monthRef.collection('days').doc(day.toString());
+  batch.create(dayRef, {})
+
+  const dayScheduleRef = dayRef.collection('items');
 
   const daySchedule = getSchedule(snap);
   daySchedule.forEach(item => {
-    dayRef.add(item)
+    batch.create(dayScheduleRef.doc(), item); 
+    // dayRef.add(item)
     console.log('Adding to item -> '+ path);
   })    
 
@@ -202,11 +216,19 @@ function getSecondsDuration(isoDuration){
   const formattedTime = isoDuration.replace("PT","").replace("H","|").replace("M","|").replace("S","");
   const timeSplit = formattedTime.split('|');
 
-  const hours = parseInt(timeSplit[0]);
-  const mins = parseInt(timeSplit[1]);
-  const secs = parseInt(timeSplit[2]);
+  const hoursIndex = timeSplit.length == 3 ? 0 : -1
+  const minsIndex = timeSplit.length == 3 ? 1 : 0
+  const secsIndex = timeSplit.length == 3 ? 2 : 1
 
-  return (hours * 60 * 60) + (mins * 60) + secs;
+  const hours = parseInt(timeSplit[hoursIndex]);
+  const mins = parseInt(timeSplit[minsIndex]);
+  const secs = parseInt(timeSplit[secsIndex]);
+
+  if(hoursIndex == -1) {
+    return (mins * 60) + secs;
+  } else {
+    return (hours * 60 * 60) + (mins * 60) + secs;
+  }
 }
 
 async function addYTVideo(collection, video){
