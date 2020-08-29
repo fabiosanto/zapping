@@ -185,7 +185,6 @@ exports.whatsLive = functions.https.onRequest(async (req, res) => {
   do {
     index++;
     durationTotal += getSecondsDuration(snap.docs[index].data().duration);
-    console.log(durationTotal + ' - ' + liveSeconds);
   } while(durationTotal < liveSeconds)
 
   liveItemIndex = index;
@@ -267,15 +266,15 @@ function getSecondsDuration(isoDuration){
   const formattedTime = isoDuration.replace("PT","").replace("H","|").replace("M","|").replace("S","");
   const timeSplit = formattedTime.split('|');
 
-  const hoursIndex = timeSplit.length == 3 ? 0 : -1
-  const minsIndex = timeSplit.length == 3 ? 1 : 0
-  const secsIndex = timeSplit.length == 3 ? 2 : 1
+  const hoursIndex = timeSplit.length === 3 ? 0 : -1
+  const minsIndex = timeSplit.length === 3 ? 1 : 0
+  const secsIndex = timeSplit.length === 3 ? 2 : 1
 
   const hours = parseInt(timeSplit[hoursIndex]);
   const mins = parseInt(timeSplit[minsIndex]);
   const secs = parseInt(timeSplit[secsIndex]);
 
-  if(hoursIndex == -1) {
+  if(hoursIndex === -1) {
     return (mins * 60) + secs;
   } else {
     return (hours * 60 * 60) + (mins * 60) + secs;
