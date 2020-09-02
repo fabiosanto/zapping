@@ -145,20 +145,20 @@ exports.addShorts = functions.https.onRequest(async (req, res) => {
 
 })
 
-exports.whatsLive = functions.https.onRequest(async (req, res) => {
+exports.whatsLive = functions.https.onCall(async (data, context) => {
   
-  const channelId = req.query.channelId;
+  const channelId = data.channelId;
 
   //example 2020-08-31T12:53:36+00:00 --> use %2B for +
-  const momentDateTime = moment(req.query.datetime).utc();
+  const momentDateTime = moment(data.datetime).utcOffset(data.datetime);
 
-  console.log('datetime is '+ req.query.datetime);
+  // console.log('datetime is '+ data.datetime);
 
   var month = momentDateTime.month() + 1;
   var day = momentDateTime.date();
   var year = momentDateTime.year();
 
-  var hours = momentDateTime.hour();
+  var hours = momentDateTime.hours();
   var minutes = momentDateTime.minute();
   var seconds = momentDateTime.second();
 
@@ -178,11 +178,11 @@ exports.whatsLive = functions.https.onRequest(async (req, res) => {
                         .collection('items')
                         .get()
   if(snap.empty){
-    res.json({ error: 'no videos here', path: path });
-    return;
+    throw new functions.https.HttpsError('invalid-argument', 'no videos here -> ' + path);
   }
 
   const liveSeconds = (parseInt(hours) * 60 * 60) + (parseInt(minutes) * 60) + parseInt(seconds); 
+
   var durationTotal = 0;
   let liveItemIndex = -1;
   let liveTimePassed = 0;
@@ -198,7 +198,7 @@ exports.whatsLive = functions.https.onRequest(async (req, res) => {
 
   const videoTimeLive = getSecondsDuration(snap.docs[liveItemIndex].data().duration) - liveTimePassed;
 
-  res.json({ ok: 'finished', liveItemIndex: liveItemIndex, liveTimePassed: videoTimeLive});
+  return { liveItemIndex: liveItemIndex, liveTimePassed: videoTimeLive}
 })
 
 exports.generate = functions.https.onRequest(async (req, res) => {
@@ -207,6 +207,8 @@ exports.generate = functions.https.onRequest(async (req, res) => {
   var month = dateObj.getUTCMonth() + 1; //months from 1-12
   var day = dateObj.getUTCDate();
   var year = dateObj.getUTCFullYear();
+
+  const channelsSnap = await db.collection('channels').get()
 
   const channelPath = 'channels/' + '7XfzrS9nrMtfN6IwI39w';
 
@@ -268,7 +270,7 @@ function getRandomItem(array){
 }
 
 function getSecondsDuration(isoDuration){
-  // example PT 1H 26M 40S -> 1|26|40
+  // example PT1H26M40S -> 1|26|40
   const formattedTime = isoDuration.replace("PT","").replace("H","|").replace("M","|").replace("S","");
   const timeSplit = formattedTime.split('|');
 
