@@ -1,5 +1,7 @@
 const functions = require('firebase-functions');
 const {google} = require('googleapis');
+const moment = require('moment');
+
 // initialize the Youtube API library
 const youtube = google.youtube({
   version: 'v3',
@@ -17,9 +19,9 @@ const youtube = google.youtube({
 const admin = require('firebase-admin');
 admin.initializeApp();
 // [END import]
-const https = require('https');
+// const https = require('https');
 
-const tmdbApiKey = '933b65fca5ee88d5b921aa00f8d3e767';
+// const tmdbApiKey = '933b65fca5ee88d5b921aa00f8d3e767';
 
 // [START addMessage]
 // Take the text parameter passed to this HTTP endpoint and insert it into
@@ -146,18 +148,22 @@ exports.addShorts = functions.https.onRequest(async (req, res) => {
 exports.whatsLive = functions.https.onRequest(async (req, res) => {
   
   const channelId = req.query.channelId;
-  const datetime = req.query.datetime;
 
-  // 2020-8-29-21-48-43
-  const datetimeSplit = datetime.split('-');
+  //example 2020-08-31T12:53:36+00:00 --> use %2B for +
+  const momentDateTime = moment(req.query.datetime).utc();
 
-  var month = datetimeSplit[1];
-  var day = datetimeSplit[2];
-  var year = datetimeSplit[0];
+  console.log('datetime is '+ req.query.datetime);
 
-  var hours = datetimeSplit[3];
-  var minutes = datetimeSplit[4];
-  var seconds = datetimeSplit[5];
+  var month = momentDateTime.month() + 1;
+  var day = momentDateTime.date();
+  var year = momentDateTime.year();
+
+  var hours = momentDateTime.hour();
+  var minutes = momentDateTime.minute();
+  var seconds = momentDateTime.second();
+
+  const path = 'channels/'+ channelId + '/schedule' + year + '/months' + month + '/days' + day + '/items';
+  console.log('trying query for -> ' + path );
 
   const db = admin.firestore();
 
@@ -172,7 +178,7 @@ exports.whatsLive = functions.https.onRequest(async (req, res) => {
                         .collection('items')
                         .get()
   if(snap.empty){
-    res.json({ error: 'no videos here' });
+    res.json({ error: 'no videos here', path: path });
     return;
   }
 
