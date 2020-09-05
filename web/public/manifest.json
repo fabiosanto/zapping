@@ -1,19 +1,19 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Tivy App",
+  "name": "The TV for the web",
   "icons": [
     {
-      "src": "favicon.ico",
+      "src": "tivy.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     },
     {
-      "src": "logo192.png",
+      "src": "tivi.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "logo512.png",
+      "src": "tivi.png",
       "type": "image/png",
       "sizes": "512x512"
     }

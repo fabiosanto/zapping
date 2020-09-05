@@ -17,8 +17,19 @@ html, body {
   font-family: 'Sriracha', cursive;
 }
 .nineties{
-  text-shadow:  #ff0048 4px 2px;
+  text-shadow:  #ab2349 4px 2px;
 }
+
+.whatson{
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.channelName{
+  align-items: center;
+    display: flex;  
+}
+
 #root{
   margin: 0;
   height: 100%;

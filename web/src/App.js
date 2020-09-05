@@ -4,12 +4,15 @@ import './App.css';
 import fire from './firebase'
 import YouTube from 'react-youtube';
 import loading from './loading.gif';
+import tiviLogo from './tivi_large.png';
+
 import {
   BrowserView,
   MobileView,
   isBrowser,
   isMobile
 } from "react-device-detect";
+import moment from 'moment';
 
 class App extends React.Component{
 
@@ -24,7 +27,9 @@ class App extends React.Component{
       userId: null,
       remoteJoin: false,
       readyToZap: false,
-      joinCodeValue: ""
+      joinCodeValue: "",
+      schedule: null,
+      live: {}
     };
 
     this.handleChange = this.handleChange.bind(this);
@@ -177,24 +182,49 @@ class App extends React.Component{
     .get()
 
     const collection = channel.data().collection
+    const channelName = channel.data().name
+
     if(!collection) return
 
-    const videos = await fire.firestore()
-    .collection(collection)
-    .get() 
-
-    const videoId = videos.docs[Math.floor(Math.random() * videos.docs.length)].data().ytube
-    console.log(videoId)
+    const scheduleData = await this.loadSchedule(channelId);
 
     this.setState({
-      videoId: videoId
+      videoId: scheduleData.schedule[scheduleData.live.liveItemIndex].data().id,
+      schedule: scheduleData.schedule,
+      live: scheduleData.live,
+      channelName: channelName,
     })
+  }
+
+  async loadSchedule(channelId){
+    const dateTime = moment();
+
+    const scheduleSnap = await fire.firestore()
+    .collection('channels')
+    .doc(channelId)
+    .collection('schedule')
+    .doc(dateTime.year().toString())
+    .collection('months')
+    .doc((dateTime.month() + 1).toString())
+    .collection('days')
+    .doc(dateTime.date().toString())
+    .collection('items')
+    .get()
+
+    const dateTimeQueryString = dateTime.format();
+
+    var whatsLive = fire.functions().httpsCallable('whatsLive');
+    const result = await whatsLive({channelId: channelId, datetime: dateTimeQueryString })
+
+   return {
+      schedule: scheduleSnap.docs,
+      live: result.data 
+    };
   }
 
   setActiveChannel(id){
     const tvId = this.state.userId
 
-    console.log(id)
     fire.firestore()
     .collection('tv')
     .doc(tvId)
@@ -256,6 +286,9 @@ class App extends React.Component{
     const channels = this.state.channels
     const remoteJoin = this.state.remoteJoin
     const readyToZap = this.state.readyToZap
+    const schedule = this.state.schedule
+    const live = this.state.live
+    const channelName = this.state.channelName
 
     const opts = {
       height: window.innerHeight,
@@ -263,8 +296,9 @@ class App extends React.Component{
       playerVars: { // https://developers.google.com/youtube/player_parameters
         autoplay: 1,
         color: 'white',
+        disablekb: 1,
         controls: 0,
-        disablekb: 1
+        start: live.liveTimePassed
       }
     };
 
@@ -282,6 +316,27 @@ class App extends React.Component{
                     videoId={videoId}
                     opts={opts}   
                   /> : null}
+                  {
+                    schedule ? 
+                    <div className="whatson">
+                      <div className="channelName">
+                        <img src={tiviLogo} height="30"/>
+                        <h1 className="nineties"> Tivy {channelName}</h1>
+                      </div>
+                    
+                      <h2>LIVE NOW - {schedule[live.liveItemIndex].data().title}</h2>
+                      <p>COMING NEXT - {schedule[live.liveItemIndex + 1].data().title}</p>
+
+                       {/* {schedule.map((item, i) => 
+                          <div> 
+                            { i == live.liveItemIndex ? 
+                                <h2>LIVE - { item.data().title }</h2> : 
+                                item.data().title
+                           }
+                          </div>
+                        )} */}
+                    </div> : null
+                  }
                 {
                   isLoading ? <div className="loading">
                     <img className="loading-image" src={loading}/>
@@ -327,6 +382,10 @@ class App extends React.Component{
                 }
             </div>
         </MobileView>
+
+        <br/><br/><br/><br/>       
+        <div>To change channel visit tivy.app from your mobile device or download the app.</div>
+        <p>All copyrights are reserved to each respective owners.</p>
   </div>
     );
   }
