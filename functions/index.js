@@ -105,6 +105,14 @@ admin.initializeApp();
 //     })
 // }
 
+exports.add = functions.https.onRequest(async (req, res) => {
+  
+  await addYTVideo(req.query.ch, req.query.id)
+
+  res.json({ ok: 'finished' });
+
+})
+
 exports.addSport = functions.https.onRequest(async (req, res) => {
   
   await addYTVideo('sports', req.query.id)
@@ -202,22 +210,32 @@ exports.whatsLive = functions.https.onCall(async (data, context) => {
 })
 
 exports.generate = functions.https.onRequest(async (req, res) => {
-  
-  var dateObj = new Date();
-  var month = dateObj.getUTCMonth() + 1; //months from 1-12
-  var day = dateObj.getUTCDate();
-  var year = dateObj.getUTCFullYear();
-
-  const channelsSnap = await db.collection('channels').get()
-
-  const channelPath = 'channels/' + '7XfzrS9nrMtfN6IwI39w';
 
   const db = admin.firestore();
 
-  const snap = await db.collection('documentaries').get()
+  const channelsSnap = await db.collection('channels').get()
+
+  channelsSnap.docs.forEach(channel => {
+      generateChannel(channel.id, channel.data().collection)
+  })
+
+  res.json({ result: 'ok' });
+})
+
+async function generateChannel(channelId, channelName) {
+
+  const dateObj = new Date();
+  const month = dateObj.getUTCMonth() + 1; //months from 1-12
+  const day = dateObj.getUTCDate();
+  const year = dateObj.getUTCFullYear();
+
+  const db = admin.firestore();
+  const channelPath = 'channels/' + channelId;
+
+  const snap = await db.collection(channelName).get()
   
   if(snap.empty){
-      res.json({ error: 'no videos here' });
+      res.json({ error: 'no videos here ' + channelName });
       return;
   }
 
@@ -238,13 +256,12 @@ exports.generate = functions.https.onRequest(async (req, res) => {
   const daySchedule = getSchedule(snap);
   daySchedule.forEach(item => {
     batch.create(dayScheduleRef.doc(), item); 
-    console.log('Adding to item -> '+ channelPath);
   })    
 
-  await batch.commit();
+  console.log('Adding to items -> '+ daySchedule.length + ' to '+ channelPath);
 
-  res.json({ result: 'ok', docCreated: daySchedule.length });
-})
+  await batch.commit();
+}
 
 function getSchedule(snap){
   const dayTotalSecs = 24 * 60 * 60
