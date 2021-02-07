@@ -105,6 +105,73 @@ admin.initializeApp();
 //     })
 // }
 
+exports.createChannel = functions.https.onRequest(async (req, res) => {
+  
+  const searchQueries = req.body.queries;
+  const channelName = req.body.channelName ? req.body.channelName : "New Channel "+ Date();
+
+  // assuming that to have a good tv schedule we need at least 100 videos
+  // we split evently across each search query (for now)
+  // in the future the user can chose how much from each query
+  const maxVideos = parseInt(100 / searchQueries.length);
+  const db = admin.firestore();
+
+  const channelRef = await db.collection('channels')
+                      .add({
+                        name: channelName,
+                        type: 'channel'
+                      })
+
+  const batch = db.batch();
+
+  const collectionRef = db.collection('channels').doc(channelRef.id)
+                        .collection('videos')
+
+  /* eslint-disable no-await-in-loop */
+  for(const query of searchQueries){
+
+      const result = await youtube.search.list({
+        part: 'snippet',
+        maxResults: maxVideos,
+        q: query,
+        type: 'video',
+        videoDuration: 'long',
+        videoEmbeddable: 'true',
+        videoLicense: 'youtube'
+      });
+
+      // fetching video length for each videos before adding to firestore
+      const videoIds = []
+      for(const videoItem of result.data.items){
+        videoIds.push(videoItem.id.videoId)
+      }
+
+      /* eslint-disable no-await-in-loop */
+      const resultVideos = await youtube.videos.list({
+        part: 'snippet,contentDetails',
+        id: videoIds.join(),
+      });
+
+      result.data.items.forEach( (videoItem, index) => {
+        // adding new video data to channel
+        batch.create(collectionRef.doc(), {
+          ytube: videoItem.id.videoId,
+          duration: resultVideos.data.items[index].contentDetails.duration,
+          title: videoItem.snippet.title,
+          desc: videoItem.snippet.description,
+          thumb: videoItem.snippet.thumbnails.default.url,
+          lang: videoItem.snippet.defaultAudioLanguage || ''
+        }); 
+      })
+  }
+
+  await batch.commit()
+
+  await generateChannel(channelRef.id)
+
+  res.json({ ok: 'finished' });
+})
+
 exports.add = functions.https.onRequest(async (req, res) => {
   
   await addYTVideo(req.query.ch, req.query.id)
@@ -156,11 +223,23 @@ exports.addShorts = functions.https.onRequest(async (req, res) => {
 exports.whatsLive = functions.https.onCall(async (data, context) => {
   
   const channelId = data.channelId;
+  const dateTime = data.datetime;
 
+  return getLiveContent(channelId, dateTime);
+})
+
+exports.whatsLiveAPI = functions.https.onRequest(async (req, res) => {
+  
+  const channelId = req.query.channelId;
+  const dateTime = req.query.datetime;
+
+  res.json(await getLiveContent(channelId, dateTime));
+})
+
+async function getLiveContent(channelId, dateTime){
   //example 2020-08-31T12:53:36+00:00 --> use %2B for +
-  const momentDateTime = moment(data.datetime).utcOffset(data.datetime);
-
-  // console.log('datetime is '+ data.datetime);
+  const momentDateTime = moment(dateTime).utcOffset(dateTime);
+  console.log('datetime is '+ dateTime);
 
   var month = momentDateTime.month() + 1;
   var day = momentDateTime.date();
@@ -170,7 +249,7 @@ exports.whatsLive = functions.https.onCall(async (data, context) => {
   var minutes = momentDateTime.minute();
   var seconds = momentDateTime.second();
 
-  const path = 'channels/'+ channelId + '/schedule' + year + '/months' + month + '/days' + day + '/items';
+  const path = 'channels/'+ channelId + '/schedule/' + year + '/months/' + month + '/days/' + day + '/items';
   console.log('trying query for -> ' + path );
 
   const db = admin.firestore();
@@ -190,6 +269,7 @@ exports.whatsLive = functions.https.onCall(async (data, context) => {
   }
 
   const liveSeconds = (parseInt(hours) * 60 * 60) + (parseInt(minutes) * 60) + parseInt(seconds); 
+  console.log('live seconds is '+liveSeconds)
 
   var durationTotal = 0;
   let liveItemIndex = -1;
@@ -198,16 +278,16 @@ exports.whatsLive = functions.https.onCall(async (data, context) => {
   var index = -1;
   do {
     index++;
-    durationTotal += getSecondsDuration(snap.docs[index].data().duration);
+    durationTotal += youtubeDurationToSeconds(snap.docs[index].data().duration);
   } while(durationTotal < liveSeconds)
 
   liveItemIndex = index;
   liveTimePassed = durationTotal - liveSeconds;
 
-  const videoTimeLive = getSecondsDuration(snap.docs[liveItemIndex].data().duration) - liveTimePassed;
-
-  return { liveItemIndex: liveItemIndex, liveTimePassed: videoTimeLive}
-})
+  const videoTimeLive = youtubeDurationToSeconds(snap.docs[liveItemIndex].data().duration) - liveTimePassed;
+  const resultObj =  { liveItemIndex: liveItemIndex, liveTimePassed: videoTimeLive}
+  return resultObj;
+}
 
 exports.generate = functions.https.onRequest(async (req, res) => {
 
@@ -216,13 +296,13 @@ exports.generate = functions.https.onRequest(async (req, res) => {
   const channelsSnap = await db.collection('channels').get()
 
   channelsSnap.docs.forEach(channel => {
-      generateChannel(channel.id, channel.data().collection)
+      generateChannel(channel.id)
   })
 
   res.json({ result: 'ok' });
 })
 
-async function generateChannel(channelId, channelName) {
+async function generateChannel(channelId) {
 
   const dateObj = new Date();
   const month = dateObj.getUTCMonth() + 1; //months from 1-12
@@ -232,10 +312,10 @@ async function generateChannel(channelId, channelName) {
   const db = admin.firestore();
   const channelPath = 'channels/' + channelId;
 
-  const snap = await db.collection(channelName).get()
+  const snap = await db.collection('channels').doc(channelId).collection('videos').get()
   
   if(snap.empty){
-      res.json({ error: 'no videos here ' + channelName });
+      console.log({ error: 'no videos here ' + channelId });
       return;
   }
 
@@ -276,7 +356,7 @@ function getSchedule(snap){
       thumb: item.thumb
     })
 
-    durationTotal += getSecondsDuration(item.duration);
+    durationTotal += youtubeDurationToSeconds(item.duration);
   }
 
   return schedule;
@@ -289,6 +369,9 @@ function getRandomItem(array){
 function getSecondsDuration(isoDuration){
   // example PT1H26M40S -> 1|26|40
   const formattedTime = isoDuration.replace("PT","").replace("H","|").replace("M","|").replace("S","");
+  
+  // if(!formattedTime.includes('S')) formattedTime + '0S'
+
   const timeSplit = formattedTime.split('|');
 
   const hoursIndex = timeSplit.length === 3 ? 0 : -1
@@ -304,6 +387,38 @@ function getSecondsDuration(isoDuration){
   } else {
     return (hours * 60 * 60) + (mins * 60) + secs;
   }
+}
+
+function youtubeDurationToSeconds(duration) {
+	var hours   = 0;
+	var minutes = 0;
+	var seconds = 0;
+
+	// Remove PT from string ref: https://developers.google.com/youtube/v3/docs/videos#contentDetails.duration
+	duration = duration.replace('PT','');
+
+	// If the string contains hours parse it and remove it from our duration string
+	if (duration.indexOf('H') > -1) {
+		hours_split = duration.split('H');
+		hours       = parseInt(hours_split[0]);
+		duration    = hours_split[1];
+	}
+
+	// If the string contains minutes parse it and remove it from our duration string
+	if (duration.indexOf('M') > -1) {
+		minutes_split = duration.split('M');
+		minutes       = parseInt(minutes_split[0]);
+		duration      = minutes_split[1];
+	}
+
+	// If the string contains seconds parse it and remove it from our duration string
+	if (duration.indexOf('S') > -1) {
+		seconds_split = duration.split('S');
+		seconds       = parseInt(seconds_split[0]);
+	}
+
+	// Math the values to return seconds
+	return (hours * 60 * 60) + (minutes * 60) + seconds;
 }
 
 async function addYTVideo(collection, video){

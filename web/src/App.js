@@ -149,7 +149,6 @@ class App extends React.Component{
       } else if(data.channelId){
         // active channel found
         // play channel
-
         const channelId = data.channelId
 
         this.setState({
@@ -181,10 +180,7 @@ class App extends React.Component{
     .doc(channelId)
     .get()
 
-    const collection = channel.data().collection
     const channelName = channel.data().name
-
-    if(!collection) return
 
     const scheduleData = await this.loadSchedule(channelId);
 
