@@ -109,6 +109,7 @@ exports.createChannel = functions.https.onRequest(async (req, res) => {
   
   const searchQueries = req.body.queries;
   const channelName = req.body.channelName ? req.body.channelName : "New Channel "+ Date();
+  const duration = req.body.duration ? req.body.duration : "any"; //any long medium short
 
   // assuming that to have a good tv schedule we need at least 100 videos
   // we split evently across each search query (for now)
@@ -135,7 +136,7 @@ exports.createChannel = functions.https.onRequest(async (req, res) => {
         maxResults: maxVideos,
         q: query,
         type: 'video',
-        videoDuration: 'long',
+        videoDuration: duration,
         videoEmbeddable: 'true',
         videoLicense: 'youtube'
       });
@@ -288,6 +289,25 @@ async function getLiveContent(channelId, dateTime){
   const resultObj =  { liveItemIndex: liveItemIndex, liveTimePassed: videoTimeLive}
   return resultObj;
 }
+
+exports.scheduledGenerate = functions.pubsub.schedule('every 24 hours').timeZone('Australia/Sydney').onRun((context) => {
+  
+  console.log('Running generate schedule!');
+
+  const db = admin.firestore();
+  
+  db.collection('channels').get()
+          .then(channelsSnap => {
+                channelsSnap.docs.forEach(channel => {
+                    generateChannel(channel.id)
+                })
+                return null
+          }).catch(err => {
+            console.log(err);
+          })
+
+  return null;
+});
 
 exports.generate = functions.https.onRequest(async (req, res) => {
 
