@@ -9,7 +9,7 @@
     "@testing-library/user-event": "^7.1.2",
     "firebase": "^7.17.1",
     "gatsby": "^2.32.4",
-    "moment": "^2.27.0",
+    "moment": "^2.29.4",
     "react": "^16.13.1",
     "react-device-detect": "^1.13.1",
     "react-dom": "^16.13.1",
